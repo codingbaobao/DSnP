@@ -22,7 +22,7 @@ static bool checkColIdx(const string& token, int& c)
       cerr << "Error: Table is not yet created!!" << endl;
       return false;
    }
-
+   
    if (!myStr2Int(token, c)) {
       cerr << "Error: " << token << " is not a number!!\n";
       return false;
@@ -56,6 +56,20 @@ bool
 initDbCmd()
 {
    // TODO...
+   if (!(cmdMgr->regCmd("DBAPpend", 4, new DBAppendCmd) &&
+         cmdMgr->regCmd("DBAVerage", 4, new DBAveCmd) &&
+         cmdMgr->regCmd("DBCount", 3, new DBCountCmd) &&
+         cmdMgr->regCmd("DBDelete", 3, new DBDelCmd) &&
+         cmdMgr->regCmd("DBMAx", 4, new DBMaxCmd) &&
+         cmdMgr->regCmd("DBMIn", 4, new DBMinCmd) &&
+         cmdMgr->regCmd("DBPrint", 3, new DBPrintCmd) &&
+         cmdMgr->regCmd("DBRead", 3, new DBReadCmd) &&
+         cmdMgr->regCmd("DBSOrt", 4, new DBSortCmd) &&
+         cmdMgr->regCmd("DBSUm", 4, new DBSumCmd)
+      )) {
+      cerr << "Registering \"init\" commands fails... exiting" << endl;
+      return false;
+   }
    return true;
 }
 
@@ -67,8 +81,57 @@ DBAppendCmd::exec(const string& option)
 {
    // TODO...
    // check option
+      vector<string> token;
+   if (!CmdExec::lexOptions(option, token) )
+      return CMD_EXEC_ERROR;
+   if(!token.empty()){
+    //  cout<<token[0]<<endl;
+      //1.check Angle brackets
+      bool isRow = false;
+      bool isCol = false;
+      if(token[0].size()<=4 && !myStrNCmp("-row", token[0], 2))   isRow = true;
+      else if(token[0].size()<=7 && !myStrNCmp("-column", token[0], 2))   isCol = true;
+      else return CmdExec::errorOption(CMD_OPT_ILLEGAL, token[0]);
 
+         //2.check the Square brackets
+         if(!dbtbl){ 
+            cerr << "Error: Table is not yet created!!" << endl;
+            return  CMD_EXEC_ERROR;
+         }
+
+         if(isRow){
+            vector<int> tempindex;
+            for(size_t i=1; i <=dbtbl.nCols() && i<token.size() ;i++){
+               int str2int;
+               if(token[i]=="-") tempindex.push_back(INT_MAX);
+               else if(!myStr2Int(token[i],str2int)){
+                  cerr << "Error: " << token[i] << " is not a number!!\n";
+                  return CMD_EXEC_ERROR;
+               }
+               else tempindex.push_back(str2int);
+            }
+            dbtbl.addRow(tempindex);
+            return CMD_EXEC_DONE;
+         }
+
+         if(isCol){
+            vector<int> tempindex;
+            for(size_t i=1; i <=dbtbl.nRows() && i<token.size() ;i++){
+               int str2int;
+               if(token[i]=="-") tempindex.push_back(INT_MAX);
+               else if(!myStr2Int(token[i],str2int)){
+                  cerr << "Error: " << token[i] << " is not a number!!\n";
+                  return CMD_EXEC_ERROR;
+               }
+               else tempindex.push_back(str2int);
+            }
+            dbtbl.addCol(tempindex);
+            return CMD_EXEC_DONE;
+         }   
+   }
+   else return CmdExec::errorOption(CMD_OPT_MISSING, token[0]);
    return CMD_EXEC_DONE;
+
 }
 
 void
@@ -97,7 +160,6 @@ DBAveCmd::exec(const string& option)
       return CMD_EXEC_ERROR;
    int c;
    if (!checkColIdx(option, c)) return CMD_EXEC_ERROR;
-
    float a = dbtbl.getAve(c);
    ios_base::fmtflags origFlags = cout.flags();
    cout << "The average of column " << c << " is " << fixed
@@ -271,7 +333,61 @@ CmdExecStatus
 DBPrintCmd::exec(const string& option)
 {  
    // TODO...
+   if(option.empty()) return CmdExec::errorOption(CMD_OPT_MISSING,option);
+   vector<string> options;
+   if (!CmdExec::lexOptions(option, options))
+      return CMD_EXEC_ERROR;
+   //1.check for -row
+   if(options[0].size() <= 4){
 
+      if(myStrNCmp("-row", options[0], 2) == 0){
+         if(options.size()==1) return CmdExec::errorOption(CMD_OPT_MISSING,options[0]);
+         int str2int;
+         if(!checkRowIdx(options[1], str2int)) return CMD_EXEC_ERROR;
+         if(options.size()>2) return CmdExec::errorOption(CMD_OPT_EXTRA, options[2]);
+         cout<<dbtbl[str2int]; 
+         return CMD_EXEC_DONE;
+         
+      }
+   }
+   //2.check for -col
+   if(options[0].size() <= 4){
+
+      if(myStrNCmp("-col", options[0], 2) == 0){
+         if(options.size()==1) return CmdExec::errorOption(CMD_OPT_MISSING,options[0]);
+         int str2int;
+         if(!checkColIdx(options[1], str2int)) return CMD_EXEC_ERROR;
+         if(options.size()>2) return CmdExec::errorOption(CMD_OPT_EXTRA, options[2]);
+         dbtbl.printCol(str2int); 
+         return CMD_EXEC_DONE;
+         
+      }
+   }
+   //3.check for -table
+   if(options[0].size() <= 6){
+
+      if(myStrNCmp("-table", options[0], 2) == 0){
+         if(options.size()!=1)  return CmdExec::errorOption(CMD_OPT_EXTRA, options[1]);
+         cout<< dbtbl; 
+         return CMD_EXEC_DONE;
+      }
+   }
+   //4.check for -summary
+   if(options[0].size() <= 8){
+
+      if(myStrNCmp("-summary", options[0], 2) == 0){
+         if(options.size()!=1) return CmdExec::errorOption(CMD_OPT_EXTRA, options[1]);
+         dbtbl.printSummary(); 
+         return CMD_EXEC_DONE;
+      }
+   }
+   //5.(int rowIdx) (int colIdx)
+   int rowIdx,colIdx;
+   if(!checkRowIdx(options[0], rowIdx))   return CMD_EXEC_ERROR;
+   if(!checkColIdx(options[1], colIdx))   return CMD_EXEC_ERROR;
+   if(options.size() > 2) return CmdExec::errorOption(CMD_OPT_EXTRA, options[2]);
+   if(dbtbl[rowIdx][colIdx]==INT_MAX) cout<<"null"<<endl;
+   else cout<<dbtbl[rowIdx][colIdx]<<endl; 
    return CMD_EXEC_DONE;
 }
 

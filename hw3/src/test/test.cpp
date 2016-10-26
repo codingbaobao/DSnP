@@ -47,6 +47,17 @@ main(int argc, char** argv)
 
    // TODO
    // Insert what you want to test here by calling DBTable's member functions
+   vector<int>rowv;
+   rowv.push_back(0);
+   rowv.push_back(INT_MAX);
+   DBRow temp(rowv);
+   dbtbl.addRow(temp);
+   cout << dbtbl << endl;
+   DBSort ssort;
+   ssort.pushOrder(1);
+   ssort.pushOrder(0);
+   dbtbl.sort(ssort);
+   cout << dbtbl << endl;
 
    return 0;
 }

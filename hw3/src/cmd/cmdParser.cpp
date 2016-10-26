@@ -29,7 +29,14 @@ bool
 CmdParser::openDofile(const string& dof)
 {
    // TODO...
+   if(_dofileStack.size() >=1024) return false;
+   _dofileStack.push(_dofile);
    _dofile = new ifstream(dof.c_str());
+   if(_dofile -> fail()){
+      _dofile =_dofileStack.top();
+      _dofileStack.pop();
+      return false;
+   }
    return true;
 }
 
@@ -40,13 +47,19 @@ CmdParser::closeDofile()
    assert(_dofile != 0);
    // TODO...
    delete _dofile;
+   if(_dofileStack.empty()) _dofile = NULL;
+   else {
+      _dofile = _dofileStack.top();
+      _dofileStack.pop();//delete the closing file
+      
+   }
 }
 
 // Return false if registration fails
 bool
 CmdParser::regCmd(const string& cmd, unsigned nCmp, CmdExec* e)
 {
-   // Make sure cmd hasn't been registered and won't cause ambiguity
+ // Make sure cmd hasn't been registered and won't cause ambiguity
    string str = cmd;
    unsigned s = str.size();
    if (s < nCmp) return false;
@@ -98,6 +111,11 @@ void
 CmdParser::printHelps() const
 {
    // TODO...
+   CmdMap::const_iterator it;
+   for(it = _cmdMap.begin(); it!=_cmdMap.end(); it++)  
+   {
+      it -> second -> help(); //map<X,Y> second==Y;  
+   }
 }
 
 void
@@ -137,10 +155,22 @@ CmdParser::parseCmd(string& option)
    assert(_tempCmdStored == false);
    assert(!_history.empty());
    string str = _history.back();
-
-   // TODO...
    assert(str[0] != 0 && str[0] != ' ');
-   return NULL;
+   // TODO...
+   string cmd;
+   size_t nextPos = myStrGetTok(str,cmd);
+   if(nextPos!=string::npos) nextPos++;
+   CmdExec* i = getCmd(cmd);
+   if(!i){
+      cerr<<"Illegal command!! \"("<<cmd<<")\"";
+      return i;
+   }
+   if(nextPos==string::npos) option ="";
+   else{
+      str = str.substr(nextPos);
+      option = str;
+   }
+   return i;
 }
 
 // This function is called by pressing 'Tab'.
@@ -225,6 +255,24 @@ CmdParser::getCmd(string cmd)
 {
    CmdExec* e = 0;
    // TODO...
+   CmdMap::const_iterator it = _cmdMap.begin();
+   while(it!=_cmdMap.end()){
+         string mapStr = it -> first;
+         string mainCmd = cmd.substr(0,mapStr.size());
+        if(myStrNCmp(mapStr, mainCmd, mapStr.size()) == 0){ //check the mandatory part
+            e = it -> second;
+            string fullStr = mapStr +( e -> getOptCmd() );
+            if(cmd.size() > fullStr.size()){  //fist check the length
+               e = 0;
+               return e;
+            }
+            if(myStrNCmp(fullStr, cmd, mapStr.size()) != 0){
+               e = 0;
+               return e; 
+            }
+         }
+         it++;
+   }
    return e;
 }
 

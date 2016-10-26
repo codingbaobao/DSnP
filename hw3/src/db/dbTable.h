@@ -25,7 +25,7 @@ public:
    void reset() { vector<int> tmp; tmp.swap(_data); }
    int& operator [] (size_t i) { return _data[i]; }
    const int& operator [] (size_t i) const { return _data[i]; }
-   void addData(int i) { /* TODO */_data.push_back();  }
+   void addData(int i) { /* TODO */_data.push_back(i);  }
    void removeCell(size_t c);
    size_t size() const { return _data.size(); }
    bool empty() const { return _data.empty(); }

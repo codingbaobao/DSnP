@@ -12,8 +12,8 @@
 #include <cassert>
 #include <set>
 #include <algorithm>
-#include <sstram>
 #include "dbTable.h"
+#include "util.h"
 
 using namespace std;
 
@@ -29,8 +29,8 @@ ostream& operator << (ostream& os, const DBRow& r)
 		if(r[i]==INT_MAX) os<<". ";
 		else	os<<r[i]<<" ";
 	}
-	if(r[i]==INT_MAX) os<<".";
-	else	os<<r[i];
+	if(r[r.size()-1]==INT_MAX) os<<"."<<endl;
+	else	os<<r[r.size()-1]<<endl;
    return os;
 }
 
@@ -40,11 +40,11 @@ ostream& operator << (ostream& os, const DBTable& t)
    // - Data are seperated by setw(6) and aligned right.
    // - Null cells are printed as '.'
 	for(unsigned int i=0;i<t.nRows();i++){
-    if(i!=0) os<<endl;
 		for(unsigned int j=0;j<t.nCols();j++){
-			if(t[i][j]==NULL) os<<setw(6<<right<<".";
+			if(t[i][j]==INT_MAX) os<<setw(6)<<right<<".";
 			else  os<<setw(6)<<right<<t[i][j];
 		}
+		os<<endl;
 	}
    return os;
 }
@@ -55,32 +55,27 @@ ifstream& operator >> (ifstream& ifs, DBTable& t)
    // - You can assume all the data of the table are in a single line.
   
   while(true){
-    getline(fs,str,'\r');
-    if(fs.eof()) break;
     string str;
+    getline(ifs,str,'\r');
+    if(ifs.eof()) break;
     bool endRow = false;
     DBRow tempRow;
     while(!endRow){
-      int commaPos = 0;
+      size_t commaPos = 0;
       commaPos = str.find(",");
-      if(commaPos == string::npos){
-        endRow = true;
-      }
-      else if(currentRead == commaPos){ //empty value
-          tempRow.addData(INT_MAX);
-          str = str.substr(commaPos+1);
-      }
+      if(commaPos == string::npos) endRow = true;
+      int temp;
+      string strnum = str.substr(0,commaPos);
+      if(strnum=="") tempRow.addData(INT_MAX);
       else{
-        int temp;
-        stringstream ss;
-        ss << str.substr(0,commaPos)
-        ss >> temp;
-        tempRow.addData(temp);
-        str.substr(commaPos+1);
+      	myStr2Int(strnum,temp);
+      	tempRow.addData(temp);
       }
+      str = str.substr(commaPos+1);
     }
     t.addRow(tempRow);
   }
+  t.delRow(t.nRows()-1);
    return ifs;
 }
 
@@ -91,7 +86,7 @@ void
 DBRow::removeCell(size_t c)
 {
    // TODO
-	_data.earse(c);
+	_data.erase(_data.begin()+c);
 }
 
 /*****************************************/
@@ -102,7 +97,12 @@ DBSort::operator() (const DBRow& r1, const DBRow& r2) const
 {
    // TODO: called as a functional object that compares the data in r1 and r2
    //       based on the order defined in _sortOrder
+  for(size_t i =0;i < _sortOrder.size();i++){
+      if(r1[_sortOrder[i]] > r2[_sortOrder[i]]) return false;
+      else if(r1[_sortOrder[i]] < r2[_sortOrder[i]]) return true;
+  }
    return false;
+  
 }
 
 /*****************************************/
@@ -130,7 +130,7 @@ void
 DBTable::delRow(int c)
 {
    // TODO: delete row #c. Note #0 is the first row.
-  _table.earse(c);
+  _table.erase(_table.begin()+c);
 }
 
 void
@@ -158,6 +158,7 @@ DBTable::getMax(size_t c) const
         }
       }
   }
+  if(max.empty())max.push_back(NAN);
   return max[0];
 }
 
@@ -167,8 +168,9 @@ DBTable::getMin(size_t c) const
    // TODO: get the min data in column #c
   float  min = _table[0][c];
   for(size_t i = 1, n = _table.size(); i < n; i++){
-      if((float)_table[i][c] < max) max = _table[i][c];
+      if((float)_table[i][c] < min) min = _table[i][c];
   }
+  if(min==INT_MAX) min = NAN;
   return min;
 }
 
@@ -176,11 +178,13 @@ float
 DBTable::getSum(size_t c) const
 {
    // TODO: compute the sum of data in column #c
+  size_t count=0;
   float sum=0;
   for(size_t i = 0, n = _table.size(); i < n; i++){
-    if(_table[i][c]==INT_MAX) continue;
+    if(_table[i][c]==INT_MAX) {count++;continue;}
     sum+=_table[i][c];
   }
+  if (count==_table.size()) sum=NAN;
   return sum;
 }
 
@@ -190,25 +194,29 @@ DBTable::getCount(size_t c) const
    // TODO: compute the number of distinct data in column #c
    // - Ignore null cells
   vector<int>counter;
+  size_t count=0;
   for (int i = 0, n = _table.size(); i < n; i++) {
-    bool same = false;
-    if(_table[i][c]==INT_MAX) continue;
+    if(_table[i][c]==INT_MAX) {count++;continue;}
     else{
-      if(std::find(counter.begin(), vector.end(), _table[i][c]) == counter.end() )//not find
+      if(std::find(counter.begin(), counter.end(), _table[i][c]) == counter.end() )//not find
         counter.push_back(_table[i][c]);
     }
-    return counter.size();
   }
+  if (count==_table.size()) return 0;
+  return counter.size();
+}
 
 float
 DBTable::getAve(size_t c) const
 {
    // TODO: compute the average of data in column #c
+  size_t count=0;
   float sum=0;
   for(size_t i = 0, n = _table.size(); i < n; i++){
-    if(_table[i][c]==INT_MAX) continue;
+    if(_table[i][c]==INT_MAX) {count++;continue;}
     sum+=_table[i][c];
   }
+  if (count==_table.size()) return NAN;
   return sum/(float)_table.size();
 }
 
@@ -216,6 +224,7 @@ void
 DBTable::sort(const struct DBSort& s)
 {
    // TODO: sort the data according to the order of columns in 's'
+  std::sort(_table.begin(), _table.end(), s); //
 }
 
 void
@@ -225,12 +234,12 @@ DBTable::printCol(size_t c) const
    // - Data are seperated by a space. No trailing space at the end.
    // - Null cells are printed as '.'
   for(int i = 0, n = _table.size()-1; i < n;i++){
-    if(_table[i][c] == INT_MAX) ccout<<". ";
+    if(_table[i][c] == INT_MAX) cout<<". ";
     else cout<<_table[i][c]<<" ";
   }
-  n = _table.size();
-  if(_table[n][c] == INT_MAX) ccout<<".";
-  else cout<<_table[n][c];
+  int n = _table.size()-1;
+  if(_table[n][c] == INT_MAX) cout<<"."<<endl;
+  else cout<<_table[n][c]<<endl;
 }
 
 void
