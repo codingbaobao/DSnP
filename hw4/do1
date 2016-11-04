@@ -8,6 +8,7 @@ mtp
 mtdel -r 2 -a
 mtp
 mtnew -a 2 3
+mtp
 mtnew -a 5 3
 mtp
 mtnew -a 7 2
