@@ -13,7 +13,7 @@ parser.add_argument('directory', help='homework directory.')
 
 FILENAME_MUST_EXIST  = "MustExist.txt"
 FILENAME_MUST_REMOVE = "MustRemove.txt"
-FILENAME_SELFCHECK   = "selfcheck.pl"
+FILENAME_SELFCHECK   = "SelfCheck"
 
 def check_remove(mrlist, name):
     for exclude in mrlist:
@@ -87,7 +87,7 @@ def bundle(stu_id, hmdir):
         os.chdir(hmdir)
         os.system("./{} {}".format(FILENAME_SELFCHECK, tarname))
     else:
-        print("\033[93mCannot find selfCheck script, skipping.\033[0m")
+        print("\033[93mCannot find SelfCheck script, skipping.\033[0m")
 
     return 0
 

@@ -1,0 +1,21 @@
+HW6
+map的opertaor[b]可以用來找東西
+但是如果b不存在,他會construct一個,造成記憶體浪費,且size也會不正確
+因此少用或只用來新增東西即可
+
+Write寫法
+andgate要事先計算HEADER才能計算
+但是又要等PO PI寫完才可寫入
+作法一
+COUNT ANDGATE的同時寫好放在STRINGSTREAM
+之後直接丟到OSTREAM避免重複跑
+作法二
+COUNT的同時把GATE的POINTER丟到VECTOR
+之後直接印
+
+作法一再大檔案情況下 吃的記憶體會大很多（1 char = 1 byte）
+but pointer always 8 bytes for 64 bits machine
+and the time saves in method 1 isnt't obvious.
+
+fraig 時不一定要merge 
+好處是
